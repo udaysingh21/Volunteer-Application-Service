@@ -1,53 +1,29 @@
--- Initial schema for Volunteer Service
--- Creates tables for volunteers, skills, volunteer_skills, and availability
+-- Simplified schema for Volunteer Service
+-- Single table containing all volunteer data
 
--- Create volunteers table
+-- Create volunteers table with all necessary fields
 CREATE TABLE IF NOT EXISTS volunteers (
     id BIGSERIAL PRIMARY KEY,
-    first_name VARCHAR(50) NOT NULL,
-    last_name VARCHAR(50) NOT NULL,
+    name VARCHAR(100) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     phone_number VARCHAR(20),
-    address VARCHAR(255),
+    location VARCHAR(255),
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
-    bio VARCHAR(500),
+    skills TEXT, -- JSON array of skills
+    interests TEXT, -- JSON array of interests
+    availability TEXT, -- JSON object for availability (days of week, weekends)
+    drives_applied TEXT, -- JSON array of drive IDs applied for
+    drives_completed TEXT, -- JSON array of drive IDs completed
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create skills table
-CREATE TABLE IF NOT EXISTS skills (
-    id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    description VARCHAR(500),
-    category VARCHAR(50),
-    is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create volunteer_skills table (many-to-many relationship)
-CREATE TABLE IF NOT EXISTS volunteer_skills (
-    id BIGSERIAL PRIMARY KEY,
-    volunteer_id BIGINT NOT NULL,
-    skill_id BIGINT NOT NULL,
-    proficiency_level INTEGER NOT NULL CHECK (proficiency_level >= 1 AND proficiency_level <= 5),
-    experience_years INTEGER CHECK (experience_years >= 0),
-    certified BOOLEAN DEFAULT false,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(volunteer_id, skill_id),
-    FOREIGN KEY (volunteer_id) REFERENCES volunteers(id) ON DELETE CASCADE,
-    FOREIGN KEY (skill_id) REFERENCES skills(id) ON DELETE CASCADE
-);
-
--- Create availability table
-CREATE TABLE IF NOT EXISTS availability (
-    id BIGSERIAL PRIMARY KEY,
-    volunteer_id BIGINT NOT NULL,
-    day_of_week VARCHAR(10),
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_volunteer_email ON volunteers(email);
+CREATE INDEX IF NOT EXISTS idx_volunteer_location ON volunteers(latitude, longitude);
+CREATE INDEX IF NOT EXISTS idx_volunteer_active ON volunteers(is_active);
     start_time TIME,
     end_time TIME,
     start_date TIMESTAMP,

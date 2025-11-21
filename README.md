@@ -1,141 +1,244 @@
-# Volunteer Application Service
+# Volunteer Profile Management Service
 
-A simplified Spring Boot microservice for managing volunteer applications to NGO postings.
+A comprehensive Spring Boot microservice for managing volunteer profiles, activities, and engagement tracking within the **Volunteer Resource Management System**.
 
-## � Purpose
+## System Architecture Overview
 
-This service handles:
-1. **Apply for Posting** - Volunteers apply for NGO postings (POST)
-2. **Get Applications** - List all applications for a volunteer (GET)  
-3. **Deregister** - Remove application from a posting (DELETE)
+This service is part of a **5-microservice ecosystem** for volunteer resource management:
 
-The volunteer data is mapped to the User Service database where user registration and preferences are stored.
+| Service | Purpose | Port |
+|---------|---------|------|
+| **User Service** | User registration, authentication, and login | 8081 |
+| **NGO Posting Service** | NGO profile management, posting creation, application tracking | 8082 |
+| **Volunteer Service** *(This Service)* | Volunteer profile management and activity tracking | 8080 |
+| **Matching Service** | Smart matching between volunteers and NGO opportunities | 8084 |
+| **Analytics Service** | Admin dashboard, monitoring, and system analytics | 8085 |
 
-## �️ Database Schema
+## Service Purpose
 
-### Table: `volunteer_applications`
+The **Volunteer Service** serves as the central hub for volunteer-related operations:
+
+1. **Profile Management** - Comprehensive volunteer profile updates
+2. **Account Management** - Complete volunteer data deletion
+3. **Activity Tracking** - Track completed volunteer drives/activities
+4. **Engagement History** - Monitor scheduled and applied activities
+
+## Database Schema
+
+### Table: `volunteers`
 
 | Column | Type | Description |
 |--------|------|-------------|
-| `id` | BIGINT (PK) | Application ID |
-| `volunteer_name` | VARCHAR | Volunteer's name |
-| `user_id` | BIGINT | Maps to User Service |
-| `posting_id` | BIGINT | NGO posting ID |
-| `posting_title` | VARCHAR | Posting title |
-| `applied_at` | TIMESTAMP | Application timestamp |
+| `id` | BIGINT (PK) | Unique volunteer identifier |
+| `name` | VARCHAR(100) | Volunteer full name |
+| `email` | VARCHAR(100) UNIQUE | Email address (links to User Service) |
+| `phone_number` | VARCHAR(20) | Contact phone number |
+| `location` | VARCHAR(255) | Geographic location/address |
+| `latitude` | DOUBLE | GPS latitude for location-based matching |
+| `longitude` | DOUBLE | GPS longitude for proximity calculations |
+| `skills` | TEXT (JSON) | Array of volunteer skills and capabilities |
+| `interests` | TEXT (JSON) | Areas of interest for volunteer work |
+| `availability` | TEXT (JSON) | Time availability (weekdays, weekends) |
+| `drives_applied` | TEXT (JSON) | Array of applied posting IDs |
+| `drives_completed` | TEXT (JSON) | Array of completed activity IDs |
+| `is_active` | BOOLEAN | Account active status |
+| `created_at` | TIMESTAMP | Profile creation timestamp |
+| `updated_at` | TIMESTAMP | Last profile update timestamp |
 
-## � Quick Setup
+### JSON Field Structures
 
-### 1. Setup PostgreSQL Database with Docker
-
-```bash
-# Start PostgreSQL container
-docker-compose -f docker-compose-db.yml up -d
-
-# Check if database is running
-docker ps
+**Skills Example:**
+```json
+["Teaching", "Event Planning", "Medical Assistance", "IT Support"]
 ```
 
-This creates:
-- **Database**: `volunteer_db`
-- **Username**: `volunteer_user` 
-- **Password**: `volunteer_pass`
-- **Port**: `5432`
-
-### 2. Connect to Database with DBeaver
-
-1. Open DBeaver
-2. Create New Connection → PostgreSQL
-3. Configure:
-   - **Host**: `localhost`
-   - **Port**: `5432`
-   - **Database**: `volunteer_db`
-   - **Username**: `volunteer_user`
-   - **Password**: `volunteer_pass`
-4. Test Connection and Save
-
-### 3. Run the Application
-
-```bash
-# Run with dev profile (uses PostgreSQL)
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+**Interests Example:**
+```json
+["Education", "Healthcare", "Environment", "Animal Welfare"]
 ```
 
-The service will:
-- Start on port **8083**
-- Auto-create the `volunteer_applications` table
-- Connect to your PostgreSQL database
-
-## 📋 API Endpoints
-
-### 1. Apply for Posting
-```http
-POST /api/volunteer-applications/apply
-Content-Type: application/json
-
+**Availability Example:**
+```json
 {
-  "volunteerName": "John Doe",
-  "userId": 123,
-  "postingId": 456,
-  "postingTitle": "Community Clean-up Drive"
+  "weekdays": ["MONDAY", "WEDNESDAY", "FRIDAY"],
+  "weekends": true
 }
 ```
 
-### 2. Get Volunteer Applications
-```http
-GET /api/volunteer-applications/volunteer/{userId}
-```
+## Quick Setup
 
-### 3. Deregister from Posting
-```http
-DELETE /api/volunteer-applications/deregister/{userId}/{postingId}
-```
+### Prerequisites
+- Java 21+ (LTS)
+- Maven 3.8+
+- H2 Database (embedded) or PostgreSQL (production)
 
-## 🧪 Testing the API
-
-### Apply for a posting:
+### 1. Clone and Build
 ```bash
-curl -X POST http://localhost:8083/api/volunteer-applications/apply \
-  -H "Content-Type: application/json" \
-  -d '{
-    "volunteerName": "John Doe",
-    "userId": 123,
-    "postingId": 456,
-    "postingTitle": "Community Clean-up Drive"
-  }'
+git clone <repository-url>
+cd Volunteer-Application-Service
+./mvnw clean install
 ```
 
-### Get applications for user:
+### 2. Run the Application
+
+**Development Mode (H2 Database):**
 ```bash
-curl http://localhost:8083/api/volunteer-applications/volunteer/123
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-### Deregister from posting:
+**Production Mode (PostgreSQL):**
 ```bash
-curl -X DELETE http://localhost:8083/api/volunteer-applications/deregister/123/456
+./mvnw spring-boot:run -Dspring-boot.run.profiles=prod
 ```
 
-## � Configuration
+### 3. Verify Service is Running
+```bash
+curl http://localhost:8080/health
+```
 
-The service connects to PostgreSQL using these settings (in `application-dev.properties`):
+Expected Response:
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": {
+    "status": "UP",
+    "timestamp": "2025-11-21T10:30:00.123456"
+  },
+  "timestamp": "2025-11-21T10:30:00.123456"
+}
+```
 
+## API Documentation
+
+For comprehensive API documentation with request/response examples, interactive testing, and schema definitions, visit the **Swagger UI** when the service is running:
+
+**Swagger UI:** [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+
+**OpenAPI Specification:** [http://localhost:8080/api/v1/api-docs](http://localhost:8080/api/v1/api-docs)
+
+### Available Endpoints
+- **PUT** `/api/v1/volunteers/{id}` - Update volunteer profile
+- **DELETE** `/api/v1/volunteers/{id}` - Delete volunteer profile  
+- **GET** `/api/v1/volunteers/{id}/drives/completed` - Get completed activities
+- **GET** `/api/v1/volunteers/{id}/drives/scheduled` - Get scheduled activities
+
+## Configuration
+
+### Development Configuration (`application-dev.properties`)
 ```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/volunteer_db
-spring.datasource.username=volunteer_user
-spring.datasource.password=volunteer_pass
-spring.jpa.hibernate.ddl-auto=update
+# Server Configuration
+server.port=8080
+
+# H2 In-Memory Database (Development)
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.username=sa
+spring.datasource.password=password
+spring.h2.console.enabled=true
+
+# JPA Configuration
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.jpa.show-sql=true
+
+# CORS Configuration (Frontend Integration)
+cors.allowed-origins=http://localhost:5174
+
+# Redis Caching (Optional)
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
 ```
 
-## 🔗 Integration Points
+### Production Configuration (`application-prod.properties`)
+```properties
+# Server Configuration
+server.port=8080
 
-- **User Service**: `userId` field maps to user registration data
-- **Matching Service**: Gets matched postings based on user preferences
-- **NGO Postings Service**: `postingId` references available opportunities
+# PostgreSQL Database (Production)
+spring.datasource.url=jdbc:postgresql://localhost:5432/volunteer_db
+spring.datasource.username=${DB_USERNAME:volunteer_user}
+spring.datasource.password=${DB_PASSWORD:volunteer_pass}
 
-## 📊 Database View in DBeaver
+# JPA Configuration
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=false
+spring.flyway.enabled=true
+```
 
-Once running, you can view the `volunteer_applications` table in DBeaver to see:
-- All volunteer applications
-- Volunteer names and their applied postings
-- Application timestamps
-- User ID mappings to User Service
+## Microservice Integration
+
+### Integration with Other Services
+
+#### User Service Integration
+- **Purpose:** Profile creation triggered after user registration
+- **Data Flow:** User ID from User Service maps to volunteer email
+- **Endpoint Dependencies:** User authentication validates volunteer access
+
+#### NGO Posting Service Integration  
+- **Purpose:** Track volunteer applications and completions
+- **Data Flow:** `drives_applied` and `drives_completed` reference NGO posting IDs
+- **Events:** Publishes volunteer engagement metrics
+
+#### Matching Service Integration
+- **Purpose:** Provides volunteer skills, interests, and availability data
+- **Data Flow:** Location coordinates enable proximity-based matching
+- **Events:** Receives optimized posting recommendations
+
+#### Analytics Service Integration
+- **Purpose:** Provides volunteer engagement and activity data
+- **Data Flow:** Completion rates, skill utilization, geographic distribution
+- **Events:** Real-time volunteer activity metrics
+
+## Monitoring & Health
+
+### Health Check Endpoint
+```bash
+curl http://localhost:8080/health
+```
+
+### Application Metrics
+- **Actuator Endpoints:** `/actuator/health`, `/actuator/metrics`
+- **Database Monitoring:** H2 Console (dev) at `http://localhost:8080/h2-console`
+- **API Documentation:** Swagger UI at `http://localhost:8080/swagger-ui.html`
+
+## Deployment
+
+### Docker Deployment
+```bash
+# Build Docker image
+docker build -t volunteer-service:latest .
+
+# Run container
+docker run -p 8080:8080 -e SPRING_PROFILES_ACTIVE=prod volunteer-service:latest
+```
+
+### Environment Variables
+```bash
+export DB_USERNAME=volunteer_user
+export DB_PASSWORD=volunteer_pass
+export REDIS_HOST=localhost
+export REDIS_PORT=6379
+```
+
+## Development
+
+### Technology Stack
+- **Java 21** (LTS)
+- **Spring Boot 3.2.10**
+- **Spring Data JPA** (Database Operations)
+- **H2/PostgreSQL** (Database)
+- **Redis** (Caching - Optional)
+- **Maven** (Dependency Management)
+- **OpenAPI 3** (API Documentation)
+
+### Key Features
+- ✅ JSON-based flexible data storage
+- ✅ Geographic coordinate support for location matching  
+- ✅ Comprehensive validation and error handling
+- ✅ Redis caching for improved performance
+- ✅ CORS support for frontend integration
+- ✅ Extensive API documentation
+- ✅ Health monitoring and metrics
+
+---
+
+**Part of the Volunteer Resource Management System** | **Service Port: 8080** | **Version: 0.0.1-SNAPSHOT**

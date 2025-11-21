@@ -1,203 +1,200 @@
 package com.volunteer.service.service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.volunteer.service.dto.VolunteerRequestDTO;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.volunteer.service.dto.VolunteerResponseDTO;
+import com.volunteer.service.dto.VolunteerResponseDTO.AvailabilityDTO;
 import com.volunteer.service.dto.VolunteerUpdateDTO;
 import com.volunteer.service.exception.ResourceNotFoundException;
 import com.volunteer.service.model.Volunteer;
 import com.volunteer.service.repository.VolunteerRepository;
 
 /**
- * Service class for managing volunteers.
- * Provides business logic for volunteer operations with caching support.
+ * Service class for managing volunteer operations.
+ * Provides business logic for the 4 essential volunteer APIs.
  */
 @Service
 @Transactional
 public class VolunteerService {
 
     private final VolunteerRepository volunteerRepository;
+    private final ObjectMapper objectMapper;
 
     @Autowired
     public VolunteerService(VolunteerRepository volunteerRepository) {
         this.volunteerRepository = volunteerRepository;
+        this.objectMapper = new ObjectMapper();
     }
 
     /**
-     * Create a new volunteer.
-     */
-    @CacheEvict(value = "volunteers", allEntries = true)
-    public VolunteerResponseDTO createVolunteer(VolunteerRequestDTO requestDTO) {
-        // Check if email already exists
-        if (volunteerRepository.findByEmail(requestDTO.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("Email already exists: " + requestDTO.getEmail());
-        }
-
-        Volunteer volunteer = convertToEntity(requestDTO);
-        Volunteer savedVolunteer = volunteerRepository.save(volunteer);
-        return convertToResponseDTO(savedVolunteer);
-    }
-
-    /**
-     * Get volunteer by ID.
-     */
-    @Cacheable(value = "volunteers", key = "#id")
-    @Transactional(readOnly = true)
-    public VolunteerResponseDTO getVolunteerById(Long id) {
-        Volunteer volunteer = volunteerRepository.findById(id)
-                .orElseThrow(() -> ResourceNotFoundException.volunteer(id));
-        return convertToResponseDTO(volunteer);
-    }
-
-    /**
-     * Get volunteer by email.
-     */
-    @Cacheable(value = "volunteers", key = "#email")
-    @Transactional(readOnly = true)
-    public VolunteerResponseDTO getVolunteerByEmail(String email) {
-        Volunteer volunteer = volunteerRepository.findByEmail(email)
-                .orElseThrow(() -> ResourceNotFoundException.volunteerByEmail(email));
-        return convertToResponseDTO(volunteer);
-    }
-
-    /**
-     * Get all active volunteers.
-     */
-    @Cacheable(value = "volunteers", key = "'active'")
-    @Transactional(readOnly = true)
-    public List<VolunteerResponseDTO> getAllActiveVolunteers() {
-        return volunteerRepository.findByIsActiveTrue()
-                .stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Get volunteers with pagination.
-     */
-    @Transactional(readOnly = true)
-    public Page<VolunteerResponseDTO> getVolunteers(Boolean isActive, Pageable pageable) {
-        if (isActive != null) {
-            return volunteerRepository.findByIsActive(isActive, pageable)
-                    .map(this::convertToResponseDTO);
-        }
-        return volunteerRepository.findAll(pageable)
-                .map(this::convertToResponseDTO);
-    }
-
-    /**
-     * Update volunteer information.
+     * Update volunteer information including location, skills, and availability.
      */
     @CacheEvict(value = "volunteers", key = "#id")
     public VolunteerResponseDTO updateVolunteer(Long id, VolunteerUpdateDTO updateDTO) {
         Volunteer volunteer = volunteerRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.volunteer(id));
 
-        updateVolunteerFromDTO(volunteer, updateDTO);
-        Volunteer updatedVolunteer = volunteerRepository.save(volunteer);
-        return convertToResponseDTO(updatedVolunteer);
+        updateVolunteerFields(volunteer, updateDTO);
+        volunteer.setUpdatedAt(LocalDateTime.now());
+        
+        Volunteer savedVolunteer = volunteerRepository.save(volunteer);
+        return convertToResponseDTO(savedVolunteer);
     }
 
     /**
-     * Delete volunteer (soft delete).
+     * Delete volunteer and all associated data from database.
      */
     @CacheEvict(value = "volunteers", key = "#id")
     public void deleteVolunteer(Long id) {
         Volunteer volunteer = volunteerRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.volunteer(id));
-        volunteer.setIsActive(false);
-        volunteerRepository.save(volunteer);
+        
+        volunteerRepository.delete(volunteer); // Hard delete
     }
 
     /**
-     * Search volunteers by name.
+     * Get list of drives/postings the volunteer has completed.
      */
+    @Cacheable(value = "drives", key = "'completed:' + #id")
     @Transactional(readOnly = true)
-    public List<VolunteerResponseDTO> searchVolunteersByName(String searchTerm) {
-        return volunteerRepository.findByNameContaining(searchTerm)
-                .stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
+    public List<String> getDrivesCompleted(Long id) {
+        Volunteer volunteer = volunteerRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.volunteer(id));
+        
+        return parseJsonToStringList(volunteer.getDrivesCompleted());
     }
 
     /**
-     * Find volunteers within geographical radius.
+     * Get list of drives/postings the volunteer has applied for (scheduled).
      */
+    @Cacheable(value = "drives", key = "'scheduled:' + #id")
     @Transactional(readOnly = true)
-    public List<VolunteerResponseDTO> findVolunteersNearby(Double latitude, Double longitude, Double radiusKm) {
-        return volunteerRepository.findVolunteersWithinRadius(latitude, longitude, radiusKm)
-                .stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
+    public List<String> getDrivesScheduled(Long id) {
+        Volunteer volunteer = volunteerRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.volunteer(id));
+        
+        return parseJsonToStringList(volunteer.getDrivesApplied());
     }
 
-    // Helper methods for conversion
-
-    private Volunteer convertToEntity(VolunteerRequestDTO dto) {
-        Volunteer volunteer = new Volunteer();
-        volunteer.setFirstName(dto.getFirstName());
-        volunteer.setLastName(dto.getLastName());
-        volunteer.setEmail(dto.getEmail());
-        volunteer.setPhoneNumber(dto.getPhoneNumber());
-        volunteer.setAddress(dto.getAddress());
-        volunteer.setLatitude(dto.getLatitude());
-        volunteer.setLongitude(dto.getLongitude());
-        volunteer.setBio(dto.getBio());
-        volunteer.setIsActive(true);
-        return volunteer;
+    /**
+     * Update volunteer fields from DTO.
+     */
+    private void updateVolunteerFields(Volunteer volunteer, VolunteerUpdateDTO updateDTO) {
+        if (updateDTO.getName() != null) {
+            volunteer.setName(updateDTO.getName());
+        }
+        if (updateDTO.getPhoneNumber() != null) {
+            volunteer.setPhoneNumber(updateDTO.getPhoneNumber());
+        }
+        if (updateDTO.getLocation() != null) {
+            volunteer.setLocation(updateDTO.getLocation());
+        }
+        if (updateDTO.getLatitude() != null) {
+            volunteer.setLatitude(updateDTO.getLatitude());
+        }
+        if (updateDTO.getLongitude() != null) {
+            volunteer.setLongitude(updateDTO.getLongitude());
+        }
+        if (updateDTO.getSkills() != null) {
+            volunteer.setSkills(convertListToJson(updateDTO.getSkills()));
+        }
+        if (updateDTO.getInterests() != null) {
+            volunteer.setInterests(convertListToJson(updateDTO.getInterests()));
+        }
+        if (updateDTO.getAvailability() != null) {
+            volunteer.setAvailability(convertAvailabilityToJson(updateDTO.getAvailability()));
+        }
+        if (updateDTO.getIsActive() != null) {
+            volunteer.setIsActive(updateDTO.getIsActive());
+        }
     }
 
+    /**
+     * Convert Volunteer entity to VolunteerResponseDTO.
+     */
     private VolunteerResponseDTO convertToResponseDTO(Volunteer volunteer) {
         VolunteerResponseDTO dto = new VolunteerResponseDTO();
         dto.setId(volunteer.getId());
-        dto.setFirstName(volunteer.getFirstName());
-        dto.setLastName(volunteer.getLastName());
+        dto.setName(volunteer.getName());
         dto.setEmail(volunteer.getEmail());
         dto.setPhoneNumber(volunteer.getPhoneNumber());
-        dto.setAddress(volunteer.getAddress());
+        dto.setLocation(volunteer.getLocation());
         dto.setLatitude(volunteer.getLatitude());
         dto.setLongitude(volunteer.getLongitude());
-        dto.setBio(volunteer.getBio());
+        dto.setSkills(parseJsonToStringList(volunteer.getSkills()));
+        dto.setInterests(parseJsonToStringList(volunteer.getInterests()));
+        dto.setAvailability(parseJsonToAvailability(volunteer.getAvailability()));
+        dto.setDrivesApplied(parseJsonToStringList(volunteer.getDrivesApplied()));
+        dto.setDrivesCompleted(parseJsonToStringList(volunteer.getDrivesCompleted()));
         dto.setIsActive(volunteer.getIsActive());
         dto.setCreatedAt(volunteer.getCreatedAt());
         dto.setUpdatedAt(volunteer.getUpdatedAt());
         return dto;
     }
 
-    private void updateVolunteerFromDTO(Volunteer volunteer, VolunteerUpdateDTO dto) {
-        if (dto.getFirstName() != null) {
-            volunteer.setFirstName(dto.getFirstName());
+    /**
+     * Parse JSON string to List<String>.
+     */
+    private List<String> parseJsonToStringList(String json) {
+        if (json == null || json.trim().isEmpty()) {
+            return new ArrayList<>();
         }
-        if (dto.getLastName() != null) {
-            volunteer.setLastName(dto.getLastName());
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
-        if (dto.getPhoneNumber() != null) {
-            volunteer.setPhoneNumber(dto.getPhoneNumber());
+    }
+
+    /**
+     * Convert List<String> to JSON string.
+     */
+    private String convertListToJson(List<String> list) {
+        if (list == null) {
+            return null;
         }
-        if (dto.getAddress() != null) {
-            volunteer.setAddress(dto.getAddress());
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            return null;
         }
-        if (dto.getLatitude() != null) {
-            volunteer.setLatitude(dto.getLatitude());
+    }
+
+    /**
+     * Parse JSON string to AvailabilityDTO.
+     */
+    private AvailabilityDTO parseJsonToAvailability(String json) {
+        if (json == null || json.trim().isEmpty()) {
+            return null;
         }
-        if (dto.getLongitude() != null) {
-            volunteer.setLongitude(dto.getLongitude());
+        try {
+            return objectMapper.readValue(json, AvailabilityDTO.class);
+        } catch (Exception e) {
+            return null;
         }
-        if (dto.getBio() != null) {
-            volunteer.setBio(dto.getBio());
+    }
+
+    /**
+     * Convert AvailabilityUpdateDTO to JSON string.
+     */
+    private String convertAvailabilityToJson(VolunteerUpdateDTO.AvailabilityUpdateDTO availability) {
+        if (availability == null) {
+            return null;
         }
-        if (dto.getIsActive() != null) {
-            volunteer.setIsActive(dto.getIsActive());
+        try {
+            return objectMapper.writeValueAsString(availability);
+        } catch (Exception e) {
+            return null;
         }
     }
 }

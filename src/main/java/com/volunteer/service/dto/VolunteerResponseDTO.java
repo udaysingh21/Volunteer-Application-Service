@@ -9,28 +9,24 @@ import java.util.List;
 public class VolunteerResponseDTO {
 
     private Long id;
-    private String firstName;
-    private String lastName;
+    private String name;
     private String email;
     private String phoneNumber;
-    private String address;
+    private String location;
     private Double latitude;
     private Double longitude;
-    private String bio;
+    private List<String> skills;
+    private List<String> interests;
+    private AvailabilityDTO availability;
+    private List<String> drivesApplied;
+    private List<String> drivesCompleted;
     private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private List<SkillResponseDTO> skills;
-    private List<AvailabilityDTO> availabilities;
 
     // Constructors
-    public VolunteerResponseDTO() {}
-
-    public VolunteerResponseDTO(Long id, String firstName, String lastName, String email) {
-        this.id = id;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
+    public VolunteerResponseDTO() {
+        // Default constructor for serialization
     }
 
     // Getters and Setters
@@ -42,20 +38,12 @@ public class VolunteerResponseDTO {
         this.id = id;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getName() {
+        return name;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getEmail() {
@@ -74,12 +62,12 @@ public class VolunteerResponseDTO {
         this.phoneNumber = phoneNumber;
     }
 
-    public String getAddress() {
-        return address;
+    public String getLocation() {
+        return location;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     public Double getLatitude() {
@@ -98,12 +86,44 @@ public class VolunteerResponseDTO {
         this.longitude = longitude;
     }
 
-    public String getBio() {
-        return bio;
+    public List<String> getSkills() {
+        return skills;
     }
 
-    public void setBio(String bio) {
-        this.bio = bio;
+    public void setSkills(List<String> skills) {
+        this.skills = skills;
+    }
+
+    public List<String> getInterests() {
+        return interests;
+    }
+
+    public void setInterests(List<String> interests) {
+        this.interests = interests;
+    }
+
+    public AvailabilityDTO getAvailability() {
+        return availability;
+    }
+
+    public void setAvailability(AvailabilityDTO availability) {
+        this.availability = availability;
+    }
+
+    public List<String> getDrivesApplied() {
+        return drivesApplied;
+    }
+
+    public void setDrivesApplied(List<String> drivesApplied) {
+        this.drivesApplied = drivesApplied;
+    }
+
+    public List<String> getDrivesCompleted() {
+        return drivesCompleted;
+    }
+
+    public void setDrivesCompleted(List<String> drivesCompleted) {
+        this.drivesCompleted = drivesCompleted;
     }
 
     public Boolean getIsActive() {
@@ -130,37 +150,31 @@ public class VolunteerResponseDTO {
         this.updatedAt = updatedAt;
     }
 
-    public List<SkillResponseDTO> getSkills() {
-        return skills;
-    }
+    /**
+     * Simple availability DTO for nested data.
+     */
+    public static class AvailabilityDTO {
+        private List<String> weekdays; // e.g., ["MONDAY", "TUESDAY"]
+        private boolean weekends; // true if available on weekends
 
-    public void setSkills(List<SkillResponseDTO> skills) {
-        this.skills = skills;
-    }
+        public AvailabilityDTO() {
+            // Default constructor for serialization
+        }
 
-    public List<AvailabilityDTO> getAvailabilities() {
-        return availabilities;
-    }
+        public List<String> getWeekdays() {
+            return weekdays;
+        }
 
-    public void setAvailabilities(List<AvailabilityDTO> availabilities) {
-        this.availabilities = availabilities;
-    }
+        public void setWeekdays(List<String> weekdays) {
+            this.weekdays = weekdays;
+        }
 
-    // Helper methods
-    public String getFullName() {
-        return firstName + " " + lastName;
-    }
+        public boolean isWeekends() {
+            return weekends;
+        }
 
-    @Override
-    public String toString() {
-        return "VolunteerResponseDTO{" +
-                "id=" + id +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", email='" + email + '\'' +
-                ", isActive=" + isActive +
-                ", skillsCount=" + (skills != null ? skills.size() : 0) +
-                ", availabilitiesCount=" + (availabilities != null ? availabilities.size() : 0) +
-                '}';
+        public void setWeekends(boolean weekends) {
+            this.weekends = weekends;
+        }
     }
 }

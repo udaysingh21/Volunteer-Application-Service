@@ -1,53 +1,49 @@
 package com.volunteer.service.model;
 
-import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
-
 /**
- * Volunteer entity representing a volunteer in the system.
- * Contains personal information, contact details, and availability.
+ * Entity representing a volunteer with all necessary data in a single table.
  */
 @Entity
-@Table(name = "volunteers", indexes = {
-        @Index(name = "idx_volunteer_email", columnList = "email"),
-        @Index(name = "idx_volunteer_location", columnList = "latitude, longitude")
-})
+@Table(name = "volunteers")
 public class Volunteer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank(message = "First name is required")
-    @Size(max = 50, message = "First name must not exceed 50 characters")
-    @Column(name = "first_name", nullable = false, length = 50)
-    private String firstName;
+    @NotBlank
+    @Size(max = 100)
+    @Column(name = "name", nullable = false, length = 100)
+    private String name;
 
-    @NotBlank(message = "Last name is required")
-    @Size(max = 50, message = "Last name must not exceed 50 characters")
-    @Column(name = "last_name", nullable = false, length = 50)
-    private String lastName;
-
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
-    @Size(max = 100, message = "Email must not exceed 100 characters")
+    @NotBlank
+    @Email
+    @Size(max = 100)
     @Column(name = "email", nullable = false, unique = true, length = 100)
     private String email;
 
-    @Size(max = 20, message = "Phone number must not exceed 20 characters")
+    @Size(max = 20)
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
-    @Size(max = 255, message = "Address must not exceed 255 characters")
-    @Column(name = "address")
-    private String address;
+    @Size(max = 255)
+    @Column(name = "location", length = 255)
+    private String location;
 
     @Column(name = "latitude")
     private Double latitude;
@@ -55,44 +51,39 @@ public class Volunteer {
     @Column(name = "longitude")
     private Double longitude;
 
-    @Size(max = 500, message = "Bio must not exceed 500 characters")
-    @Column(name = "bio", length = 500)
-    private String bio;
+    @Column(name = "skills", columnDefinition = "TEXT")
+    private String skills; // JSON array of skills
 
-    @NotNull(message = "Active status is required")
+    @Column(name = "interests", columnDefinition = "TEXT")
+    private String interests; // JSON array of interests
+
+    @Column(name = "availability", columnDefinition = "TEXT")
+    private String availability; // JSON object for availability
+
+    @Column(name = "drives_applied", columnDefinition = "TEXT")
+    private String drivesApplied; // JSON array of drive IDs applied for
+
+    @Column(name = "drives_completed", columnDefinition = "TEXT")
+    private String drivesCompleted; // JSON array of drive IDs completed
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-
-    @OneToMany(mappedBy = "volunteer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<VolunteerSkill> volunteerSkills = new HashSet<>();
-
-    @OneToMany(mappedBy = "volunteer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<Availability> availabilities = new HashSet<>();
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 
     // Constructors
     public Volunteer() {}
 
-    public Volunteer(String firstName, String lastName, String email) {
-        this.firstName = firstName;
-        this.lastName = lastName;
+    public Volunteer(String name, String email) {
+        this.name = name;
         this.email = email;
+        this.isActive = true;
     }
 
     // Getters and Setters
@@ -104,20 +95,12 @@ public class Volunteer {
         this.id = id;
     }
 
-    public String getFirstName() {
-        return firstName;
+    public String getName() {
+        return name;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getEmail() {
@@ -136,12 +119,12 @@ public class Volunteer {
         this.phoneNumber = phoneNumber;
     }
 
-    public String getAddress() {
-        return address;
+    public String getLocation() {
+        return location;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     public Double getLatitude() {
@@ -160,12 +143,44 @@ public class Volunteer {
         this.longitude = longitude;
     }
 
-    public String getBio() {
-        return bio;
+    public String getSkills() {
+        return skills;
     }
 
-    public void setBio(String bio) {
-        this.bio = bio;
+    public void setSkills(String skills) {
+        this.skills = skills;
+    }
+
+    public String getInterests() {
+        return interests;
+    }
+
+    public void setInterests(String interests) {
+        this.interests = interests;
+    }
+
+    public String getAvailability() {
+        return availability;
+    }
+
+    public void setAvailability(String availability) {
+        this.availability = availability;
+    }
+
+    public String getDrivesApplied() {
+        return drivesApplied;
+    }
+
+    public void setDrivesApplied(String drivesApplied) {
+        this.drivesApplied = drivesApplied;
+    }
+
+    public String getDrivesCompleted() {
+        return drivesCompleted;
+    }
+
+    public void setDrivesCompleted(String drivesCompleted) {
+        this.drivesCompleted = drivesCompleted;
     }
 
     public Boolean getIsActive() {
@@ -190,70 +205,5 @@ public class Volunteer {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
-    }
-
-    public Set<VolunteerSkill> getVolunteerSkills() {
-        return volunteerSkills;
-    }
-
-    public void setVolunteerSkills(Set<VolunteerSkill> volunteerSkills) {
-        this.volunteerSkills = volunteerSkills;
-    }
-
-    public Set<Availability> getAvailabilities() {
-        return availabilities;
-    }
-
-    public void setAvailabilities(Set<Availability> availabilities) {
-        this.availabilities = availabilities;
-    }
-
-    // Helper methods
-    public String getFullName() {
-        return firstName + " " + lastName;
-    }
-
-    public void addSkill(VolunteerSkill volunteerSkill) {
-        volunteerSkills.add(volunteerSkill);
-        volunteerSkill.setVolunteer(this);
-    }
-
-    public void removeSkill(VolunteerSkill volunteerSkill) {
-        volunteerSkills.remove(volunteerSkill);
-        volunteerSkill.setVolunteer(null);
-    }
-
-    public void addAvailability(Availability availability) {
-        availabilities.add(availability);
-        availability.setVolunteer(this);
-    }
-
-    public void removeAvailability(Availability availability) {
-        availabilities.remove(availability);
-        availability.setVolunteer(null);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        Volunteer volunteer = (Volunteer) obj;
-        return id != null && id.equals(volunteer.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return getClass().hashCode();
-    }
-
-    @Override
-    public String toString() {
-        return "Volunteer{" +
-                "id=" + id +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", email='" + email + '\'' +
-                ", isActive=" + isActive +
-                '}';
     }
 }

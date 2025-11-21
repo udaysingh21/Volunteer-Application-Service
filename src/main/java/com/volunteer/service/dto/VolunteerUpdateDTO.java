@@ -1,5 +1,7 @@
 package com.volunteer.service.dto;
 
+import java.util.List;
+
 import jakarta.validation.constraints.Size;
 
 /**
@@ -7,45 +9,39 @@ import jakarta.validation.constraints.Size;
  */
 public class VolunteerUpdateDTO {
 
-    @Size(max = 50, message = "First name must not exceed 50 characters")
-    private String firstName;
+    @Size(max = 100)
+    private String name;
 
-    @Size(max = 50, message = "Last name must not exceed 50 characters")
-    private String lastName;
-
-    @Size(max = 20, message = "Phone number must not exceed 20 characters")
+    @Size(max = 20)
     private String phoneNumber;
 
-    @Size(max = 255, message = "Address must not exceed 255 characters")
-    private String address;
+    @Size(max = 255)
+    private String location;
 
     private Double latitude;
 
     private Double longitude;
 
-    @Size(max = 500, message = "Bio must not exceed 500 characters")
-    private String bio;
+    private List<String> skills;
+
+    private List<String> interests;
+
+    private AvailabilityUpdateDTO availability;
 
     private Boolean isActive;
 
     // Constructors
-    public VolunteerUpdateDTO() {}
+    public VolunteerUpdateDTO() {
+        // Default constructor for serialization
+    }
 
     // Getters and Setters
-    public String getFirstName() {
-        return firstName;
+    public String getName() {
+        return name;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getPhoneNumber() {
@@ -56,12 +52,12 @@ public class VolunteerUpdateDTO {
         this.phoneNumber = phoneNumber;
     }
 
-    public String getAddress() {
-        return address;
+    public String getLocation() {
+        return location;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     public Double getLatitude() {
@@ -80,12 +76,28 @@ public class VolunteerUpdateDTO {
         this.longitude = longitude;
     }
 
-    public String getBio() {
-        return bio;
+    public List<String> getSkills() {
+        return skills;
     }
 
-    public void setBio(String bio) {
-        this.bio = bio;
+    public void setSkills(List<String> skills) {
+        this.skills = skills;
+    }
+
+    public List<String> getInterests() {
+        return interests;
+    }
+
+    public void setInterests(List<String> interests) {
+        this.interests = interests;
+    }
+
+    public AvailabilityUpdateDTO getAvailability() {
+        return availability;
+    }
+
+    public void setAvailability(AvailabilityUpdateDTO availability) {
+        this.availability = availability;
     }
 
     public Boolean getIsActive() {
@@ -96,17 +108,31 @@ public class VolunteerUpdateDTO {
         this.isActive = isActive;
     }
 
-    @Override
-    public String toString() {
-        return "VolunteerUpdateDTO{" +
-                "firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", phoneNumber='" + phoneNumber + '\'' +
-                ", address='" + address + '\'' +
-                ", latitude=" + latitude +
-                ", longitude=" + longitude +
-                ", bio='" + bio + '\'' +
-                ", isActive=" + isActive +
-                '}';
+    /**
+     * Nested DTO for availability updates.
+     */
+    public static class AvailabilityUpdateDTO {
+        private List<String> weekdays; // e.g., ["MONDAY", "TUESDAY"]
+        private Boolean weekends; // true if available on weekends
+
+        public AvailabilityUpdateDTO() {
+            // Default constructor for serialization
+        }
+
+        public List<String> getWeekdays() {
+            return weekdays;
+        }
+
+        public void setWeekdays(List<String> weekdays) {
+            this.weekdays = weekdays;
+        }
+
+        public Boolean getWeekends() {
+            return weekends;
+        }
+
+        public void setWeekends(Boolean weekends) {
+            this.weekends = weekends;
+        }
     }
 }
